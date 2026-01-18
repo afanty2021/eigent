@@ -1,7 +1,7 @@
 # Eigent - AI 上下文文档
 
-> 最后更新：2026-01-16
-> 文档覆盖率：98%+
+> 最后更新：2026-01-18
+> 文档覆盖率：99%+
 
 ---
 
@@ -24,35 +24,38 @@
 ### 后端 (Python)
 
 ```yaml
-框架: FastAPI
-异步服务器: Uvicorn
+框架: FastAPI 0.115.12+
+异步服务器: Uvicorn 0.34.2+
 多智能体框架: CAMEL-AI 0.2.83a9
 包管理器: uv
 认证: OAuth 2.0, Passlib
 Python 版本: 3.10
+HTTP 客户端: httpx 0.28.1+
 ```
 
 ### 前端 (TypeScript)
 
 ```yaml
-框架: React 18.3
-桌面应用: Electron 33
-UI 组件: Radix UI, Tailwind CSS
-状态管理: Zustand
-流程编辑器: React Flow (@xyflow/react)
-编辑器: Monaco Editor
-终端: xterm.js
-动画: Framer Motion, GSAP
+框架: React 18.3.1
+桌面应用: Electron 33.2.0
+UI 组件: Radix UI, Tailwind CSS 3.4.15
+状态管理: Zustand 5.0.4
+流程编辑器: React Flow (@xyflow/react 12.6.4)
+编辑器: Monaco Editor 0.52.2
+终端: xterm.js 5.5.0
+动画: Framer Motion 12.17.0, GSAP 3.13.0
+路由: React Router DOM 7.6.0
 ```
 
 ### 开发工具
 
 ```yaml
-构建工具: Vite 5.4
-测试框架: Vitest 2.1
-端到端测试: Playwright
-类型检查: TypeScript 5.4
+构建工具: Vite 5.4.11
+测试框架: Vitest 2.1.5
+端到端测试: Playwright 1.48.2
+类型检查: TypeScript 5.4.2
 代码规范: Ruff (Python), ESLint (TypeScript)
+包管理器: npm/pnpm
 ```
 
 ---
@@ -136,24 +139,34 @@ eigent/
 
 **主要控制器:**
 
-- **`chat_controller.py`**: 聊天会话管理
+- **`chat_controller.py`**: 聊天会话管理 (13600+ 字节)
   - `POST /chat` - 创建新聊天会话
   - `PUT /chat/{project_id}/improve` - 改进聊天回复
   - `PUT /chat/{project_id}/supplement` - 补充消息
   - `POST /chat/{project_id}/human_reply` - 人类回复
 
-- **`task_controller.py`**: 任务生命周期管理
+- **`task_controller.py`**: 任务生命周期管理 (3000+ 字节)
   - `POST /task/start` - 启动任务
   - `POST /task/stop` - 停止任务
   - `POST /task/add` - 添加子任务
   - `POST /task/remove` - 移除任务
 
-- **`model_controller.py`**: 模型验证和配置
+- **`model_controller.py`**: 模型验证和配置 (4800+ 字节)
   - `POST /model/validate` - 验证模型配置
+  - `GET /model/list` - 获取可用模型列表
+  - `POST /model/custom` - 添加自定义模型
 
-- **`tool_controller.py`**: MCP 工具管理
-  - `POST /tool/install` - 安装 MCP 工具
+- **`tool_controller.py`**: MCP 工具管理 (35000+ 字节)
+  - `POST /tool/install/tool/{tool}` - 安装特定 MCP 工具
+    - `notion` - Notion 集成工具
+    - `google_calendar` - Google Calendar 集成工具
   - `GET /tool/{mcp_name}/servers` - 获取 MCP 服务器列表
+  - `POST /tool/oauth/callback` - OAuth 认证回调
+  - `POST /tool/set_cookie` - 设置浏览器 Cookie
+  - `GET /tool/get_cookies` - 获取已保存的 Cookies
+
+- **`health_controller.py`**: 健康检查 (700 字节)
+  - `GET /health` - 检查服务健康状态
 
 #### 2. 服务层 (Services)
 
@@ -193,7 +206,7 @@ routers_config = [
 
 **主要 Store:**
 
-- **`chatStore.ts`**: 聊天状态 (800+ 行)
+- **`chatStore.ts`**: 聊天状态 (88000+ 字节)
   ```typescript
   interface Task {
     messages: Message[];
@@ -217,15 +230,60 @@ routers_config = [
   }
   ```
 
-- **`authStore.ts`**: 认证状态
+- **`authStore.ts`**: 认证状态 (5000+ 字节)
   - 用户登录/登出
   - Worker 管理
   - API 密钥管理
 
-- **`projectStore.ts`**: 项目状态
+- **`projectStore.ts`**: 项目状态 (23000+ 字节)
   - 项目列表管理
   - 项目切换
   - 项目配置
+
+- **`installationStore.ts`**: 安装状态管理 (7600+ 字节)
+  ```typescript
+  type InstallationState =
+    | 'idle'
+    | 'checking-permissions'
+    | 'showing-carousel'
+    | 'installing'
+    | 'waiting-backend'
+    | 'error'
+    | 'completed';
+
+  interface InstallationLog {
+    type: 'stdout' | 'stderr';
+    data: string;
+    timestamp: Date;
+  }
+
+  interface InstallationStoreState {
+    state: InstallationState;
+    progress: number;
+    logs: InstallationLog[];
+    error?: string;
+    backendError?: string;
+    isVisible: boolean;
+    needsBackendRestart: boolean;
+
+    // Actions
+    startInstallation: () => void;
+    addLog: (log: InstallationLog) => void;
+    setSuccess: () => void;
+    setError: (error: string) => void;
+    setBackendError: (error: string) => void;
+    performInstallation: () => Promise<void>;
+    // ... 更多方法
+  }
+  ```
+
+- **`globalStore.ts`**: 全局状态
+  - 应用级配置
+  - 全局主题设置
+
+- **`sidebarStore.ts`**: 侧边栏状态
+  - 侧边栏展开/收起
+  - 导航状态
 
 #### 2. 核心组件
 
@@ -882,6 +940,71 @@ chore: 构建/工具相关
 3. 提交代码
 4. 创建 Pull Request
 5. 等待代码审查
+
+---
+
+## 版本信息
+
+### 当前版本
+
+- **前端版本**: 0.0.80
+- **后端版本**: 0.1.0
+- **Electron**: 33.2.0
+- **CAMEL-AI**: 0.2.83a9
+
+### 版本历史
+
+#### v0.0.80 (2026-01-18)
+
+**主要更新:**
+- ✨ 移除预构建文件，优化构建流程
+- 🎲 默认模型随机化选择
+- 🐛 修复 HTML 文件中相对图片路径渲染问题
+- 🔧 修复通过代理连接 WebSocket 的问题
+- 💬 改进隐私同意和模型选择用户体验
+- 🌐 更新多语言翻译文件
+- 📝 更新文档（日语、葡萄牙语版本）
+
+**技术改进:**
+- 优化预安装依赖脚本
+- 改进构建签名测试流程
+- 更新 GitHub Actions 工作流
+- 优化 Electron 主进程安装依赖逻辑
+
+**依赖更新:**
+- 更新 `@xyflow/react` 至 12.6.4
+- 更新 React Router DOM 至 7.6.0
+- 更新 Framer Motion 至 12.17.0
+- 更新后端 `fastapi` 至 0.115.12+
+- 更新后端 `httpx` 至 0.28.1+
+
+---
+
+## 变更记录
+
+### 2026-01-18 - 文档同步更新
+
+- 📈 **版本信息更新**：添加当前版本号和版本历史
+- 🔧 **技术栈版本同步**：更新所有依赖版本至最新
+- 📊 **文档覆盖率提升**：从 98%+ 提升至 99%+
+- 🗂️ **完善项目结构**：补充 store 和 controller 详细信息
+
+### 近期重要变更
+
+**构建系统优化:**
+- 添加 `preinstall-deps` 脚本处理依赖安装
+- 添加 `clean-symlinks` 脚本清理符号链接
+- 添加 `test-signing` 脚本测试代码签名
+
+**用户体验改进:**
+- 改进聊天输入框禁用状态处理
+- 优化文件夹组件渲染性能
+- 改进工作流编辑器交互
+
+**Bug 修复:**
+- 修复 HTML 文件中图片相对路径问题
+- 修复通过全局代理连接 WebSocket 的问题
+- 修复聊天输入框在未准备好的情况下被禁用的问题
 
 ---
 
